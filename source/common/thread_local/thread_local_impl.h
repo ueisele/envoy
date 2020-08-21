@@ -34,53 +34,31 @@ public:
 private:
   struct SlotImpl : public Slot {
     SlotImpl(InstanceImpl& parent, uint64_t index) : parent_(parent), index_(index) {}
-    ~SlotImpl() override { parent_.removeSlot(*this); }
+    ~SlotImpl() override;
+    Event::PostCb wrapCallback(Event::PostCb cb, uint32_t ref_count_to_add);
 
     // ThreadLocal::Slot
     ThreadLocalObjectSharedPtr get() override;
     bool currentThreadRegistered() override;
     void runOnAllThreads(const UpdateCb& cb) override;
     void runOnAllThreads(const UpdateCb& cb, Event::PostCb complete_cb) override;
-    void runOnAllThreads(Event::PostCb cb) override { parent_.runOnAllThreads(cb); }
-    void runOnAllThreads(Event::PostCb cb, Event::PostCb main_callback) override {
-      parent_.runOnAllThreads(cb, main_callback);
-    }
-    void set(InitializeCb cb) override;
-
-    InstanceImpl& parent_;
-    const uint64_t index_;
-  };
-
-  using SlotImplPtr = std::unique_ptr<SlotImpl>;
-
-  // A Wrapper of SlotImpl which on destruction returns the SlotImpl to the deferred delete queue
-  // (detaches it).
-  struct Bookkeeper : public Slot {
-    Bookkeeper(InstanceImpl& parent, SlotImplPtr&& slot);
-    ~Bookkeeper() override { parent_.recycle(std::move(slot_)); }
-
-    // ThreadLocal::Slot
-    ThreadLocalObjectSharedPtr get() override;
-    void runOnAllThreads(const UpdateCb& cb) override;
-    void runOnAllThreads(const UpdateCb& cb, Event::PostCb complete_cb) override;
-    bool currentThreadRegistered() override;
     void runOnAllThreads(Event::PostCb cb) override;
     void runOnAllThreads(Event::PostCb cb, Event::PostCb main_callback) override;
     void set(InitializeCb cb) override;
 
     InstanceImpl& parent_;
-    SlotImplPtr slot_;
-    std::shared_ptr<uint32_t> ref_count_;
+    const uint64_t index_;
+    std::atomic<uint64_t> ref_count_{1};
+    bool ready_to_destroy_ ABSL_GUARDED_BY(shutdown_mutex_){false};
+    absl::Mutex shutdown_mutex_;
   };
+
+  using SlotImplPtr = std::unique_ptr<SlotImpl>;
 
   struct ThreadLocalData {
     Event::Dispatcher* dispatcher_{};
     std::vector<ThreadLocalObjectSharedPtr> data_;
   };
-
-  void recycle(SlotImplPtr&& slot);
-  // Cleanup the deferred deletes queue.
-  void scheduleCleanup(SlotImpl* slot);
 
   void removeSlot(SlotImpl& slot);
   void runOnAllThreads(Event::PostCb cb);
@@ -88,11 +66,6 @@ private:
   static void setThreadLocal(uint32_t index, ThreadLocalObjectSharedPtr object);
 
   static thread_local ThreadLocalData thread_local_data_;
-
-  // A indexed container for Slots that has to be deferred to delete due to out-going callbacks
-  // pointing to the Slot. To let the ref_count_ deleter find the SlotImpl by address, the container
-  // is defined as a map of SlotImpl address to the unique_ptr<SlotImpl>.
-  absl::flat_hash_map<SlotImpl*, SlotImplPtr> deferred_deletes_;
 
   std::vector<SlotImpl*> slots_;
   // A list of index of freed slots.
