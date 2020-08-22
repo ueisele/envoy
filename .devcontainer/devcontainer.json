@@ -2,13 +2,14 @@
   "name": "Envoy Dev",
   "dockerFile": "Dockerfile",
   "runArgs": [
-    "--user=vscode",
+    "-u", "vscode",
     "--cap-add=SYS_PTRACE",
     "--cap-add=NET_RAW",
     "--cap-add=NET_ADMIN",
-    "--security-opt=seccomp=unconfined",
-    "--volume=${env:HOME}:${env:HOME}",
-    "--volume=envoy-build:/build",
+    "--security-opt", "seccomp=unconfined",
+    "-v", "${env:HOME}:${env:HOME}",
+    "-v", "envoy-build:/tmp/build",
+    "-v", "/var/run/docker.sock:/var/run/docker.sock"
     // Uncomment next line if you have devcontainer.env
     // "--env-file=.devcontainer/devcontainer.env"
   ],
@@ -32,6 +33,7 @@
   },
   "remoteUser": "vscode",
   "containerUser": "vscode",
+  "workspaceFolder": "~/workspace",
   "postCreateCommand": ".devcontainer/setup.sh",
   "extensions": [
     "github.vscode-pull-request-github",
