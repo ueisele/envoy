@@ -24,6 +24,42 @@ namespace NetworkFilters {
 namespace Kafka {
 
 /**
+ * Utility namespace for endian conversions.
+ */
+namespace EndianConversions {
+
+  template <typename T>
+  T swap(const T &val, typename std::enable_if<std::is_arithmetic<T>::value, std::nullptr_t>::type = nullptr) {
+    union U {
+        T val;
+        std::array<std::uint8_t, sizeof(T)> raw;
+    } src, dst;
+    src.val = val;
+    std::reverse_copy(src.raw.begin(), src.raw.end(), dst.raw.begin());
+    return dst.val;
+  }
+
+  template <typename T>
+  T htobe(const T &val, typename std::enable_if<std::is_arithmetic<T>::value, std::nullptr_t>::type = nullptr) {
+  #if __BYTE_ORDER == __LITTLE_ENDIAN
+    return swap(val);
+  #else
+    return val;       
+  #endif
+  }
+
+  template <typename T>
+  T betoh(const T &val, typename std::enable_if<std::is_arithmetic<T>::value, std::nullptr_t>::type = nullptr) {
+  #if __BYTE_ORDER == __LITTLE_ENDIAN
+    return swap(val);
+  #else
+    return val;       
+  #endif
+  }
+
+}
+
+/**
  * Deserializer is a stateful entity that constructs a result of type T from bytes provided.
  * It can be feed()-ed data until it is ready, filling the internal store.
  * When ready(), it is safe to call get() to transform the internally stored bytes into result.
@@ -62,10 +98,10 @@ public:
 };
 
 /**
- * Generic integer deserializer (uses array of sizeof(T) bytes).
+ * Generic number deserializer (uses array of sizeof(T) bytes).
  * After all bytes are filled in, the value is converted from network byte-order and returned.
  */
-template <typename T> class IntDeserializer : public Deserializer<T> {
+template <typename T> class NumberDeserializer : public Deserializer<T> {
 public:
   uint32_t feed(absl::string_view& data) override {
     const uint32_t available = std::min<uint32_t>(sizeof(buf_) - written_, data.size());
@@ -92,7 +128,7 @@ protected:
 /**
  * Integer deserializer for int8_t.
  */
-class Int8Deserializer : public IntDeserializer<int8_t> {
+class Int8Deserializer : public NumberDeserializer<int8_t> {
 public:
   int8_t get() const override {
     int8_t result;
@@ -104,7 +140,7 @@ public:
 /**
  * Integer deserializer for int16_t.
  */
-class Int16Deserializer : public IntDeserializer<int16_t> {
+class Int16Deserializer : public NumberDeserializer<int16_t> {
 public:
   int16_t get() const override {
     int16_t result;
@@ -116,7 +152,7 @@ public:
 /**
  * Integer deserializer for int32_t.
  */
-class Int32Deserializer : public IntDeserializer<int32_t> {
+class Int32Deserializer : public NumberDeserializer<int32_t> {
 public:
   int32_t get() const override {
     int32_t result;
@@ -128,7 +164,7 @@ public:
 /**
  * Integer deserializer for uint32_t.
  */
-class UInt32Deserializer : public IntDeserializer<uint32_t> {
+class UInt32Deserializer : public NumberDeserializer<uint32_t> {
 public:
   uint32_t get() const override {
     uint32_t result;
@@ -140,12 +176,24 @@ public:
 /**
  * Integer deserializer for uint64_t.
  */
-class Int64Deserializer : public IntDeserializer<int64_t> {
+class Int64Deserializer : public NumberDeserializer<int64_t> {
 public:
   int64_t get() const override {
     int64_t result;
     memcpy(&result, buf_, sizeof(result));
     return be64toh(result);
+  }
+};
+
+/**
+ * Floating-Point deserializer for _Float64
+ */
+class Float64Deserializer : public NumberDeserializer<_Float64> {
+public:
+  _Float64 get() const override {
+    _Float64 result;
+    memcpy(&result, buf_, sizeof(result));
+    return EndianConversions::betoh(result);
   }
 };
 
@@ -880,6 +928,7 @@ COMPUTE_SIZE_OF_NUMERIC_TYPE(int16_t)
 COMPUTE_SIZE_OF_NUMERIC_TYPE(int32_t)
 COMPUTE_SIZE_OF_NUMERIC_TYPE(uint32_t)
 COMPUTE_SIZE_OF_NUMERIC_TYPE(int64_t)
+COMPUTE_SIZE_OF_NUMERIC_TYPE(_Float64)
 
 /**
  * Template overload for string.
@@ -1050,6 +1099,7 @@ ENCODE_NUMERIC_TYPE(int16_t, htobe16);
 ENCODE_NUMERIC_TYPE(int32_t, htobe32);
 ENCODE_NUMERIC_TYPE(uint32_t, htobe32);
 ENCODE_NUMERIC_TYPE(int64_t, htobe64);
+ENCODE_NUMERIC_TYPE(_Float64, EndianConversions::htobe);
 
 /**
  * Template overload for bool.

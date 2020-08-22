@@ -185,6 +185,12 @@ class StatefulProcessor:
     Parse given complex type, returning a structure that holds its name, field specification and
     allowed versions.
     """
+    # Some of the types repeat multiple times (e.g. AlterableConfig).
+    # Other types are used in request and response messages (e.g. EntityData)
+    # Therefore, we ensure that every type is prefixed with the name of the currently processed message.
+    if not type_name.startswith(self.currently_processed_message_type):
+      type_name = self.currently_processed_message_type + type_name
+
     fields_el = field_spec.get('fields')
 
     if fields_el is not None:
@@ -194,16 +200,7 @@ class StatefulProcessor:
         if child is not None:
           fields.append(child)
 
-      # Some of the types repeat multiple times (e.g. AlterableConfig).
-      # In such a case, every second or later occurrence of the same name is going to be prefixed
-      # with parent type, e.g. we have AlterableConfig (for AlterConfigsRequest) and then
-      # IncrementalAlterConfigsRequestAlterableConfig (for IncrementalAlterConfigsRequest).
-      # This keeps names unique, while keeping non-duplicate ones short.
-      if type_name not in self.known_types:
-        self.known_types.add(type_name)
-      else:
-        type_name = self.currently_processed_message_type + type_name
-        self.known_types.add(type_name)
+      self.known_types.add(type_name)
 
       return Complex(type_name, fields, versions)
 
@@ -344,7 +341,7 @@ class FieldSpec:
     """
     Whether the field is nullable in given version.
     Fields can be non-nullable in earlier versions.
-    See https://github.com/apache/kafka/tree/2.2.0-rc0/clients/src/main/resources/common/message#nullable-fields
+    See https://github.com/apache/kafka/tree/2.6.0/clients/src/main/resources/common/message#nullable-fields
     """
     return version in self.version_usage_as_nullable
 
@@ -375,7 +372,7 @@ class FieldSpec:
       return str(self.type.default_value())
 
   def example_value_for_test(self, version):
-    if self.is_nullable():
+    if self.is_nullable_in_version(version):
       return 'absl::make_optional<%s>(%s)' % (self.type.name,
                                               self.type.example_value_for_test(version))
     else:
@@ -466,7 +463,7 @@ class Primitive(TypeSpecification):
   Represents a Kafka primitive value.
   """
 
-  USABLE_PRIMITIVE_TYPE_NAMES = ['bool', 'int8', 'int16', 'int32', 'int64', 'string', 'bytes']
+  USABLE_PRIMITIVE_TYPE_NAMES = ['bool', 'int8', 'int16', 'int32', 'int64', 'float64', 'string', 'bytes']
 
   KAFKA_TYPE_TO_ENVOY_TYPE = {
       'string': 'std::string',
@@ -475,6 +472,7 @@ class Primitive(TypeSpecification):
       'int16': 'int16_t',
       'int32': 'int32_t',
       'int64': 'int64_t',
+      'float64': '_Float64',
       'bytes': 'Bytes',
       'tagged_fields': 'TaggedFields',
   }
@@ -486,6 +484,7 @@ class Primitive(TypeSpecification):
       'int16': 'Int16Deserializer',
       'int32': 'Int32Deserializer',
       'int64': 'Int64Deserializer',
+      'float64': 'Float64Deserializer',
       'bytes': 'BytesDeserializer',
       'tagged_fields': 'TaggedFieldsDeserializer',
   }
@@ -503,6 +502,7 @@ class Primitive(TypeSpecification):
       'int16': '0',
       'int32': '0',
       'int64': '0',
+      'float64': '0.0',
       'bytes': '{}',
       'tagged_fields': 'TaggedFields({})',
   }
@@ -521,6 +521,8 @@ class Primitive(TypeSpecification):
           'static_cast<int32_t>(32)',
       'int64':
           'static_cast<int64_t>(64)',
+      'float64':
+          'static_cast<_Float64>(6.4)',
       'bytes':
           'Bytes({0, 1, 2, 3})',
       'tagged_fields':
