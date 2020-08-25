@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sstream>
+
 #include "envoy/common/exception.h"
 
 #include "extensions/filters/network/kafka/external/serialization_composite.h"
@@ -69,7 +71,30 @@ struct RequestHeader {
            correlation_id_ == rhs.correlation_id_ && client_id_ == rhs.client_id_ &&
            tagged_fields_ == rhs.tagged_fields_;
   };
+
+  std::string toString() const {
+    std::ostringstream os;
+    os << "{";
+    os << "\"api_key\":";
+    os << api_key_;
+    os << "\"api_version\":";
+    os << api_version_;
+    os << "\"correlation_id\":";
+    os << correlation_id_;
+    os << "\"client_id\":";
+    if (client_id_.has_value()) { os << "\"" << client_id_.value() << "\""; } else { os << "null"; }
+    os << "\"tagged_fields\":";
+    os << tagged_fields_;
+    os << "}";
+    return os.str();
+  }
+
 };
+
+inline std::ostream& operator<<(std::ostream& os, const RequestHeader & rhs) {
+    os << rhs.toString();
+    return os;
+}
 
 /**
  * Carries information that could be extracted during the failed parse.
@@ -112,6 +137,8 @@ public:
    * @param dst buffer instance to keep serialized message
    */
   virtual uint32_t encode(Buffer::Instance& dst) const PURE;
+
+  virtual std::string toString() const PURE;
 
   /**
    * Request's header.
@@ -163,9 +190,26 @@ public:
     return request_header_ == rhs.request_header_ && data_ == rhs.data_;
   };
 
+  std::string toString() const override {
+    std::ostringstream os;
+    os << "{";
+    os << "\"request_header\":";
+    os << request_header_;
+    os << "\"data\":";
+    os << data_;
+    os << "}";
+    return os.str();
+  }
+
 private:
   const Data data_;
 };
+
+template <typename Data> 
+inline std::ostream& operator<<(std::ostream& os, const Request<Data>& rhs) {
+    os << rhs.toString();
+    return os;
+}
 
 } // namespace Kafka
 } // namespace NetworkFilters

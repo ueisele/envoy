@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sstream>
+
 #include "extensions/filters/network/kafka/external/serialization_composite.h"
 #include "extensions/filters/network/kafka/serialization.h"
 #include "extensions/filters/network/kafka/tagged_fields.h"
@@ -59,11 +61,31 @@ struct ResponseMetadata {
            correlation_id_ == rhs.correlation_id_ && tagged_fields_ == rhs.tagged_fields_;
   };
 
+  std::string toString() const {
+    std::ostringstream os;
+    os << "{";
+    os << "\"api_key\":";
+    os << api_key_;
+    os << "\"api_version\":";
+    os << api_version_;
+    os << "\"correlation_id\":";
+    os << correlation_id_;
+    os << "\"tagged_fields\":";
+    os << tagged_fields_;
+    os << "}";
+    return os.str();
+  }
+
   const int16_t api_key_;
   const int16_t api_version_;
   const int32_t correlation_id_;
   const TaggedFields tagged_fields_;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const ResponseMetadata & rhs) {
+    os << rhs.toString();
+    return os;
+}
 
 using ResponseMetadataSharedPtr = std::shared_ptr<ResponseMetadata>;
 
@@ -92,6 +114,8 @@ public:
    * @param dst buffer instance to keep serialized message.
    */
   virtual uint32_t encode(Buffer::Instance& dst) const PURE;
+
+  virtual std::string toString() const PURE;
 
   /**
    * Response's metadata.
@@ -141,9 +165,26 @@ public:
     return metadata_ == rhs.metadata_ && data_ == rhs.data_;
   };
 
+  std::string toString() const override {
+    std::ostringstream os;
+    os << "{";
+    os << "\"metadata\":";
+    os << metadata_;
+    os << "\"data\":";
+    os << data_;
+    os << "}";
+    return os.str();
+  }
+
 private:
   const Data data_;
 };
+
+template <typename Data> 
+inline std::ostream& operator<<(std::ostream& os, const Response<Data>& rhs) {
+    os << rhs.toString();
+    return os;
+}
 
 } // namespace Kafka
 } // namespace NetworkFilters

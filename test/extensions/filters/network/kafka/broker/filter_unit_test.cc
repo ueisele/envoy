@@ -78,6 +78,7 @@ public:
       : AbstractRequest{{api_key, api_version, correlation_id, ""}} {};
   uint32_t computeSize() const override { return 0; };
   uint32_t encode(Buffer::Instance&) const override { return 0; };
+  std::string toString() const override { return ""; }
 };
 
 class MockResponse : public AbstractResponse {
@@ -86,6 +87,7 @@ public:
       : AbstractResponse{{api_key, 0, correlation_id}} {};
   uint32_t computeSize() const override { return 0; };
   uint32_t encode(Buffer::Instance&) const override { return 0; };
+  std::string toString() const override { return ""; }
 };
 
 // Tests.

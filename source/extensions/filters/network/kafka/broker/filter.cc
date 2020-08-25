@@ -31,6 +31,8 @@ KafkaMetricsFacadeImpl::KafkaMetricsFacadeImpl(TimeSource& time_source,
 
 // When request is successfully parsed, increase type count and store its arrival timestamp.
 void KafkaMetricsFacadeImpl::onMessage(AbstractRequestSharedPtr request) {
+  ENVOY_LOG(trace, "{}", request->toString());
+
   const RequestHeader& header = request->request_header_;
   request_metrics_->onRequest(header.api_key_);
 
@@ -38,7 +40,9 @@ void KafkaMetricsFacadeImpl::onMessage(AbstractRequestSharedPtr request) {
   request_arrivals_[header.correlation_id_] = request_arrival_ts;
 }
 
-void KafkaMetricsFacadeImpl::onFailedParse(RequestParseFailureSharedPtr) {
+void KafkaMetricsFacadeImpl::onFailedParse(RequestParseFailureSharedPtr parse_failure) {
+  ENVOY_LOG(trace, "{\"request_header\":{},\"failure\":\"unknown request\"}", parse_failure->request_header_.toString());
+
   request_metrics_->onUnknownRequest();
 }
 
@@ -47,6 +51,8 @@ void KafkaMetricsFacadeImpl::onRequestException() { request_metrics_->onBrokenRe
 // When response is successfully parsed, compute processing time using its correlation id and
 // stored request arrival timestamp, then update metrics with the result.
 void KafkaMetricsFacadeImpl::onMessage(AbstractResponseSharedPtr response) {
+  ENVOY_LOG(trace, "{}", response->toString());
+
   const ResponseMetadata& metadata = response->metadata_;
 
   const MonotonicTime response_arrival_ts = time_source_.monotonicTime();
@@ -59,7 +65,9 @@ void KafkaMetricsFacadeImpl::onMessage(AbstractResponseSharedPtr response) {
   response_metrics_->onResponse(metadata.api_key_, ms.count());
 }
 
-void KafkaMetricsFacadeImpl::onFailedParse(ResponseMetadataSharedPtr) {
+void KafkaMetricsFacadeImpl::onFailedParse(ResponseMetadataSharedPtr parse_failure) {
+  ENVOY_LOG(trace, "{\"response_metadata\":{},\"failure\":\"unknown response\"}", parse_failure->toString());
+
   response_metrics_->onUnknownResponse();
 }
 

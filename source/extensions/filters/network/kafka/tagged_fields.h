@@ -45,6 +45,11 @@ struct TaggedField {
   bool operator==(const TaggedField& rhs) const { return tag_ == rhs.tag_ && data_ == rhs.data_; }
 };
 
+inline std::ostream& operator<<(std::ostream& os, TaggedField const& obj) {
+    os << "{\"tag\":" << obj.tag_ << ",\"data\":" << obj.data_ << "}";
+    return os;
+}
+
 /**
  * Deserializer responsible for extracting a TaggedField from data provided.
  */
@@ -122,6 +127,11 @@ struct TaggedFields {
 
   bool operator==(const TaggedFields& rhs) const { return fields_ == rhs.fields_; }
 };
+
+inline std::ostream& operator<<(std::ostream& os, TaggedFields const& obj) {
+    os << "{\"fields\":" << obj.fields_ << "}";
+    return os;
+}
 
 /**
  * Deserializer responsible for extracting tagged fields from data provided.

@@ -73,7 +73,7 @@ using KafkaMetricsFacadeSharedPtr = std::shared_ptr<KafkaMetricsFacade>;
  * Keeps requests' arrival timestamps (by correlation id) and uses them calculate response
  * processing time.
  */
-class KafkaMetricsFacadeImpl : public KafkaMetricsFacade {
+class KafkaMetricsFacadeImpl : public KafkaMetricsFacade, private Logger::Loggable<Logger::Id::kafka> {
 public:
   /**
    * Creates facade that keeps prefixed metrics in given scope, and uses given time source to
