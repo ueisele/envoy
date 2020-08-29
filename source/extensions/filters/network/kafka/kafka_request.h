@@ -77,13 +77,13 @@ struct RequestHeader {
     os << "{";
     os << "\"api_key\":";
     os << api_key_;
-    os << "\"api_version\":";
+    os << ",\"api_version\":";
     os << api_version_;
-    os << "\"correlation_id\":";
+    os << ",\"correlation_id\":";
     os << correlation_id_;
-    os << "\"client_id\":";
+    os << ",\"client_id\":";
     if (client_id_.has_value()) { os << "\"" << client_id_.value() << "\""; } else { os << "null"; }
-    os << "\"tagged_fields\":";
+    os << ",\"tagged_fields\":";
     os << tagged_fields_;
     os << "}";
     return os.str();
@@ -195,7 +195,7 @@ public:
     os << "{";
     os << "\"request_header\":";
     os << request_header_;
-    os << "\"data\":";
+    os << ",\"data\":";
     os << data_;
     os << "}";
     return os.str();

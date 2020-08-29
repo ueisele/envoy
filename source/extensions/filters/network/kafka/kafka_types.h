@@ -46,7 +46,7 @@ inline std::ostream& operator<<(std::ostream& os, const std::vector<T> & v) {
 }
 
 inline std::ostream& operator<<(std::ostream& os, const std::vector<unsigned char> & b) {
-    os << "{\"bytes\"" << b.size() << "}";
+    os << "{\"bytes\":" << b.size() << "}";
     return os;
 }
 

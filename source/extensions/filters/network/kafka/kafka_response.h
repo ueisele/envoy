@@ -66,11 +66,11 @@ struct ResponseMetadata {
     os << "{";
     os << "\"api_key\":";
     os << api_key_;
-    os << "\"api_version\":";
+    os << ",\"api_version\":";
     os << api_version_;
-    os << "\"correlation_id\":";
+    os << ",\"correlation_id\":";
     os << correlation_id_;
-    os << "\"tagged_fields\":";
+    os << ",\"tagged_fields\":";
     os << tagged_fields_;
     os << "}";
     return os.str();
@@ -170,7 +170,7 @@ public:
     os << "{";
     os << "\"metadata\":";
     os << metadata_;
-    os << "\"data\":";
+    os << ",\"data\":";
     os << data_;
     os << "}";
     return os.str();
