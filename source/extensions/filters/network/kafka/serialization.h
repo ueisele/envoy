@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -9,11 +8,11 @@
 #include "envoy/common/exception.h"
 #include "envoy/common/pure.h"
 
-#include "common/common/byte_order.h"
 #include "common/common/fmt.h"
 #include "common/common/utility.h"
 
 #include "extensions/filters/network/kafka/kafka_types.h"
+#include "extensions/filters/network/kafka/byte_order.h"
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
@@ -22,42 +21,6 @@ namespace Envoy {
 namespace Extensions {
 namespace NetworkFilters {
 namespace Kafka {
-
-/**
- * Utility namespace for endian conversions.
- */
-namespace EndianConversions {
-
-  template <typename T>
-  T swap(const T &val, typename std::enable_if<std::is_arithmetic<T>::value, std::nullptr_t>::type = nullptr) {
-    union U {
-        T val;
-        std::array<std::uint8_t, sizeof(T)> raw;
-    } src, dst;
-    src.val = val;
-    std::reverse_copy(src.raw.begin(), src.raw.end(), dst.raw.begin());
-    return dst.val;
-  }
-
-  template <typename T>
-  T htobe(const T &val, typename std::enable_if<std::is_arithmetic<T>::value, std::nullptr_t>::type = nullptr) {
-  #if __BYTE_ORDER == __LITTLE_ENDIAN
-    return swap(val);
-  #else
-    return val;       
-  #endif
-  }
-
-  template <typename T>
-  T betoh(const T &val, typename std::enable_if<std::is_arithmetic<T>::value, std::nullptr_t>::type = nullptr) {
-  #if __BYTE_ORDER == __LITTLE_ENDIAN
-    return swap(val);
-  #else
-    return val;       
-  #endif
-  }
-
-}
 
 /**
  * Deserializer is a stateful entity that constructs a result of type T from bytes provided.
@@ -193,7 +156,7 @@ public:
   _Float64 get() const override {
     _Float64 result;
     memcpy(&result, buf_, sizeof(result));
-    return EndianConversions::betoh(result);
+    return netToHost(result);
   }
 };
 
@@ -1099,7 +1062,7 @@ ENCODE_NUMERIC_TYPE(int16_t, htobe16);
 ENCODE_NUMERIC_TYPE(int32_t, htobe32);
 ENCODE_NUMERIC_TYPE(uint32_t, htobe32);
 ENCODE_NUMERIC_TYPE(int64_t, htobe64);
-ENCODE_NUMERIC_TYPE(_Float64, EndianConversions::htobe);
+ENCODE_NUMERIC_TYPE(_Float64, hostToNet);
 
 /**
  * Template overload for bool.

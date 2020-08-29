@@ -225,6 +225,7 @@ envoy_cc_library(
     hdrs = [
         "external/serialization_composite.h",
         "serialization.h",
+        "byte_order.h",
     ],
     deps = [
         ":kafka_types_lib",
